@@ -6,13 +6,20 @@ import threading
 from TGTs import *
 
 
-HOST = '192.168.1.6'
+HOST = '192.168.1.5'
 PORT = 2249  # state socket port
 
 # ardu = serial.Serial('/dev/ttyUSB0', 115200)  # Arduino "/dev/ttyACM0"
 # time.sleep(3)
 
 Target = [-35.35643454149282,  149.16611533539404 ,  584]
+
+Target_list = []
+target_num = 0
+target_x = 0
+target_y = 0
+target_z = 0
+
 tilt, pan = 0 , 0
 
 cmd_enum, cmd_param1, cmd_param2, cmd_param3 = 2 , 0 , 0 , 0
@@ -23,9 +30,11 @@ connected = False
 
 
 def server_handling():
+    i = 0
     global lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1  # send
     global cmd_enum, cmd_param1, cmd_param2, cmd_param3 # receive
     global connected
+    target_num, target_x, target_y, target_z = 0,0,0,0
     connected = False
     while True:
         if not connected:
@@ -40,9 +49,16 @@ def server_handling():
 
 
         if connected:
+            j = len(Target_list)
+            if i < j:
+                target_num, target_x, target_y = Target_list[i][0], Target_list[i][1], Target_list[i][2]
+                i+=1
+            else:
+                i = 0
+            
             try:
                 clinet.send(
-                    f"{round(lat,7)},{round(lon,7)},{round(elev,1)},{round(tilt,1)},{round(pan,1)},{round(distance,1)},{round(bearing,1)},{round(psi,2)},{round(lat1,7)},{round(lon1,7)},{round(elev1,1)} #".encode('utf-8'))   
+                    f"{round(lat,7)},{round(lon,7)},{round(elev,1)},{round(tilt,1)},{round(pan,1)},{round(distance,1)},{round(bearing,1)},{round(psi,2)},{round(lat1,7)},{round(lon1,7)},{round(elev1,1)},{int(target_num)},{round(target_x,7)},{round(target_y,7)},{round(target_z,1)}#".encode('utf-8'))   
             except:
                 connected = False
                 print('disconnected')
@@ -95,8 +111,20 @@ while True:
 
     if cmd_enum == 10:
         Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
+        if Target[2]==0:
+            master.mav.send(mavutil.mavlink.MAVLink_terrain_check_message(int(lat*1e7), int(lon*1e7)))
+            report = master.recv_match(type='TERRAIN_REPORT', blocking=True)
+            if report.lat == int(lat*1e7):
+                Target[2]= report.terrain_height
+                mode = 2
+                print(elev,report.lat,int(lat*1e7))
+            else:
+                continue
 
-
+    if mode == 10:
+        control_mode = 0
+        tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat,lon,elev)
+        
     if mode == 1:  #center
         control_mode = 0
         tilt, pan, tilt_cmd, pan_cmd  = 0, 0, 0, 0
@@ -119,6 +147,7 @@ while True:
     if mode == 4:  #locke
         if lock_mode == 0:
             lat, lon, elev, distance, bearing, psi,lat1,lon1,elev1 = ranging(tilt, pan)
+            Target_list.append([len(Target_list),lat,lon])
             lock_mode = 1  # target aqquired
 
         if lock_mode == 1:
