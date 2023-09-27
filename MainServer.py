@@ -10,8 +10,8 @@ import os
 import numpy as np
 import time
 
-HOST = '192.168.1.6'
-PORT = 2249
+HOST = '192.168.1.5'
+PORT = 2249  # state socket port
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
@@ -118,6 +118,14 @@ def VideoFeed():
 	pygameGUI.start()
 
 
+def slave_cmd():
+	global cmd_enum,cmd_param1,cmd_param2
+	cmd = app.menu.get_menu_option()
+	cmd = cmd.split(',')
+	print(cmd)
+	cmd_enum,cmd_param1,cmd_param2 = 10,cmd[1],cmd[2]
+
+
 def marker_gen():
 	global marker_list,shown_markers,new_marker
 	while True:
@@ -204,13 +212,13 @@ class Menu(ttk.Frame):
 		self.button.grid(row=4, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
 		self.button = ttk.Button(self, text = 'Engage (CCRP)', command = button_func)
 		self.button.grid(row=5, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
-		self.button = ttk.Button(self, text = 'Slave TGP', command = button_func)
+		self.button = ttk.Button(self, text = 'Slave TGP', command = slave_cmd)
 		self.button.grid(row=6, column=0, sticky="nsew", columnspan=4,pady=10, padx=10)
 		self.button = ttk.Button(self, text = 'Show TGP Video', command = VideoFeed)
 		self.button.grid(row=7, column=0, sticky="nsew", columnspan=4,pady=10, padx=10)
 	
 	def get_menu_option(self):
-		return self.selected_value.get()
+		return self.selected_value.get().strip('()')
 	
 	def refresh_marker_select(self,new_choices):
 		# Reset var and delete all old options
