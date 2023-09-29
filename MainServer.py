@@ -48,6 +48,10 @@ def client_handling():
 			# sending and recvining data from client on connection
 			try:
 				server_socket.send(f'{cmd_enum} , {cmd_param1} , {cmd_param2} , {cmd_param3}#'.encode('utf-8'))
+				if cmd_enum > 10:
+					print(f'command sent : {cmd_enum}')
+					time.sleep(1)
+					cmd_enum,cmd_param1,cmd_param2,cmd_param3 = 0,0,0,0
 			except:
 				connected = False
 				print('disconnected')
@@ -84,6 +88,7 @@ def client_handling():
 				setup = False
 
 			# TGP control when gamepy is lunched.
+
 			if gameON == True:
 				if PygameUI.msg1 != None:
 					cmd_enum = PygameUI.msg1
@@ -124,6 +129,14 @@ def slave_cmd():
 	cmd = cmd.split(',')
 	print(cmd)
 	cmd_enum,cmd_param1,cmd_param2 = 10,cmd[1],cmd[2]
+
+def loiter_cmd():
+	global cmd_enum,cmd_param1,cmd_param2
+	cmd = app.menu.get_menu_option()
+	cmd = cmd.split(',')
+	print(cmd)
+	cmd_enum,cmd_param1,cmd_param2 = 20,cmd[1],cmd[2]
+
 
 
 def marker_gen():
@@ -208,7 +221,7 @@ class Menu(ttk.Frame):
 		self.string_value = tk.StringVar( value= 'Connect')
 		self.button = ttk.Button(self, textvariable= self.string_value, command = connect)
 		self.button.grid(row=3, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
-		self.button = ttk.Button(self, text = 'Loiter', command = button_func)
+		self.button = ttk.Button(self, text = 'Loiter', command = loiter_cmd)
 		self.button.grid(row=4, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
 		self.button = ttk.Button(self, text = 'Engage (CCRP)', command = button_func)
 		self.button.grid(row=5, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
@@ -234,4 +247,3 @@ if __name__ == "__main__":
 	app = App(size=(1500,700),title="heemo")
 	threading.Thread(target=marker_gen,daemon=True).start()
 	app.start()
-	
