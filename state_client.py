@@ -96,18 +96,18 @@ while True:
     # gimbal = ardu_data.split(',')
     # pan, tilt = float(gimbal[0]) , float(gimbal[1])  
 
-    if cmd_enum < 1 :
-        pass
     
 
     if connected:         # CMD Loop connected
         if 1 <= cmd_enum <= 10:
             # print('CMD_Loop connected')
             mode , tilt_cmd, pan_cmd = cmd_enum, cmd_param1, cmd_param2
-            
-    else :
-        pass
+
+        else :
+            pass
         
+    if cmd_enum==20:
+        loiter(cmd_param1,cmd_param2)
 
     if cmd_enum == 10:
         Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
@@ -120,6 +120,11 @@ while True:
                 print(elev,report.lat,int(lat*1e7))
             else:
                 continue
+
+
+    if cmd_enum > 10 :
+        print(f'command recived: {cmd_enum}')
+        time.sleep(1)
 
     if mode == 10:
         control_mode = 0
