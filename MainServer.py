@@ -10,8 +10,8 @@ import os
 import numpy as np
 import time
 
-HOST = '192.168.1.5'
-PORT = 2249  # state socket port
+HOST = 'localhost'
+PORT = 2250  # state socket port
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
@@ -48,9 +48,8 @@ def client_handling():
 			# sending and recvining data from client on connection
 			try:
 				server_socket.send(f'{cmd_enum} , {cmd_param1} , {cmd_param2} , {cmd_param3}#'.encode('utf-8'))
-				if cmd_enum > 10:
+				if cmd_enum >= 10:
 					print(f'command sent : {cmd_enum}')
-					time.sleep(1)
 					cmd_enum,cmd_param1,cmd_param2,cmd_param3 = 0,0,0,0
 			except:
 				connected = False
@@ -82,7 +81,7 @@ def client_handling():
 
 				app.menu.string_value.set(value = f'Connected from {address[0]}')
 				aircraft_marker = app.map_widget.set_marker(lat1, lon1,icon=plane_image)
-				marker_2 = app.map_widget.set_marker(lat, lon,icon=eye_image)
+				sight_marker = app.map_widget.set_marker(lat, lon,icon=eye_image)
 				app.map_widget.set_zoom(15)
 				app.map_widget.set_position(lat1, lon1)
 				setup = False
@@ -97,14 +96,15 @@ def client_handling():
 					# print(cmd_enum, cmd_param1, cmd_param2)
 				else:
 					gameON = False # when pygame shuts down, its sends none as the last message
-			# print(cmd_enum)
+
 
 			# loop (looping when connected)
 			PygameUI.lat,PygameUI.lon,PygameUI.elev,PygameUI.tilt,PygameUI.pan,PygameUI.distance,PygameUI.bearing,PygameUI.psi,PygameUI.lat1,PygameUI.lon1,PygameUI.elev1=lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1 
 			
 			aircraft_marker.change_icon(ImageTk.PhotoImage(plane_img.rotate(90-np.degrees(psi))))
 			aircraft_marker.set_position(lat1,lon1)
-			marker_2.set_position(lat,lon)
+			sight_marker.set_position(lat,lon)
+
 
 def mark_point():
 	print("marking")
@@ -115,13 +115,11 @@ def mark_point():
 	app.menu.entry_var.set('')
 	new_marker = True
 
-
 def VideoFeed():
 	global gameON
 	pygameGUI = threading.Thread(target=PygameUI.game, daemon=True)
 	gameON = True
 	pygameGUI.start()
-
 
 def slave_cmd():
 	global cmd_enum,cmd_param1,cmd_param2
@@ -136,7 +134,6 @@ def loiter_cmd():
 	cmd = cmd.split(',')
 	print(cmd)
 	cmd_enum,cmd_param1,cmd_param2 = 20,cmd[1],cmd[2]
-
 
 
 def marker_gen():
@@ -190,7 +187,6 @@ class App(ttk.Window):
 		self.mainloop()
 
 
-
 class Menu(ttk.Frame):
 	def __init__(self, parent):
 		super().__init__(parent)
@@ -199,7 +195,7 @@ class Menu(ttk.Frame):
 		self.columnconfigure((0,1,2),weight= 1 , uniform= 'a')
 		self.rowconfigure((0,1,2,3,4,5,6,7,8,9),weight= 1 , uniform= 'a')
 		
-		self.p1 = PhotoImage(file="/home/heemo/Desktop/TGT/WSMICON.png")
+		self.p1 = PhotoImage(file="/home/heemo/WSM/WSMICON.png")
 		self.pic = ttk.Label(parent, image=self.p1)
 		self.pic.grid(row=0, column=0,sticky="nsew",columnspan=3,rowspan=3)
 		
@@ -240,7 +236,6 @@ class Menu(ttk.Frame):
 
 		for choice in new_choices:
 			self.drop_down['menu'].add_command(label=choice, command=tk._setit(self.selected_value, choice))
-
 
 
 if __name__ == "__main__":
