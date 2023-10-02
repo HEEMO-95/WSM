@@ -25,24 +25,29 @@ def request_message_interval(message_id: int, frequency_hz: float):
 request_message_interval(mavutil.mavlink.MAVLINK_MSG_ID_MISSION_ITEM_REACHED ,10)
 
 
-def request_mision_list():
+def request_mission_list(timeout_seconds=10):
+    start_time = time.time()  # Record the starting time
+
     while True:
         master.mav.send(mavutil.mavlink.MAVLink_mission_request_list_message(
-            master.target_system, master.target_component,0))
-        print('recv_match')
-        msg = master.recv_match(type=['MISSION_COUNT'],blocking=False)
+            master.target_system, master.target_component, 0))
+        
+        msg = master.recv_match(type=['MISSION_COUNT'], blocking=False)
+        time.sleep(0.1)
         if msg:
             print(msg)
-            break
+            return msg  # Return the received message
+        
+        if time.time() - start_time > timeout_seconds:  # Check if elapsed time has exceeded the timeout
+            print("Request timed out.")
+            return None  # Return None to indicate a failure due to timeout
         else:
-            time.sleep(0.1)
             print('Trying to request mission list')
-            continue
-    return msg
+
 
 def read_wp():
     wp_list=[]
-    msg = request_mision_list()
+    msg = request_mission_list()
 
     for i in range(msg.count):
         master.waypoint_request_send(i)
@@ -58,62 +63,74 @@ def read_wp():
     return wp_list
 
 
-def clear_wp():
+def clear_wp(timeout_seconds=10):
+    start_time = time.time()  # Record the starting time
+
     while True:
         master.mav.send(mavutil.mavlink.MAVLink_mission_clear_all_message(
-            master.target_system, master.target_component,0))
-        msg = master.recv_match(type=['MISSION_ACK'],blocking=False)
+            master.target_system, master.target_component, 0))
+
+        msg = master.recv_match(type=['MISSION_ACK'], blocking=False)
+        time.sleep(0.1)
         if msg:
             print(msg)
-            break
+            return msg  # Optionally, return the received message if needed
 
-        else:
-            time.sleep(0.1)
-            print('Trying to clear wp list')
-            continue
+        if time.time() - start_time > timeout_seconds:  # Check if elapsed time has exceeded the timeout
+            print("Clearing waypoints timed out.")
+            return None  # Return None to indicate a failure due to timeout
+        
+        print('Trying to clear wp list')
 
 
 def update_mission(wp_list,new_point):
-    if new_point:
-        # print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- NEW POINT =-=-=-=-=-=-=-=-=-=-=-=--=--=-=")
-        position = bisect_left([x[0] for x in wp_list], new_point[0])
-        if 17 <= wp_list[position][2] <= 19:
-            wp_list[position] = new_point
-        else:
-            wp_list.insert(position, new_point)
-            for i in range(position+1, len(wp_list)):
-                wp_list[i][0] += 1
-    
-    wp.clear()
-
-    for mission_item in range(len(wp_list)): 
-
-        seq = wp_list[mission_item][0]
-        frame = wp_list[mission_item][1]
-        command = wp_list[mission_item][2]
-        current = wp_list[mission_item][3]
-        autocontinue = wp_list[mission_item][4]
-        param1,param2,param3,param4 = wp_list[mission_item][5],wp_list[mission_item][6],wp_list[mission_item][4],wp_list[mission_item][8]
-        x,y,z = wp_list[mission_item][9],wp_list[mission_item][10],wp_list[mission_item][11]
-        mission_type = wp_list[mission_item][12]
-
+    done = False
+    while not done:
+        if new_point:
+            # print("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- NEW POINT =-=-=-=-=-=-=-=-=-=-=-=--=--=-=")
+            position = bisect_left([x[0] for x in wp_list], new_point[0])
+            if 17 <= wp_list[position][2] <= 19:
+                wp_list[position] = new_point
+            else:
+                wp_list.insert(position, new_point)
+                for i in range(position+1, len(wp_list)):
+                    wp_list[i][0] += 1
         
-        p = mavutil.mavlink.MAVLink_mission_item_message(master.target_system, master.target_component,
-                                                        seq, frame, command,
-                                                        current, autocontinue,
-                                                        param1, param2, param3, param4,
-                                                        x, y, z,mission_type)
-        wp.add(p)
+        wp.clear()
 
-    print('NEW WAYPOINT COUNT : ',wp.count())
-    clear_wp()
-    master.waypoint_count_send(wp.count())
+        for mission_item in range(len(wp_list)): 
 
-    for i in range(wp.count()):
-        msg = master.recv_match(type=['MISSION_REQUEST'],blocking=True)
-        # print(msg)
-        master.mav.send(wp.wp(msg.seq))
-        print(f'Sending waypoint {msg.seq}')
+            seq = wp_list[mission_item][0]
+            frame = wp_list[mission_item][1]
+            command = wp_list[mission_item][2]
+            current = wp_list[mission_item][3]
+            autocontinue = wp_list[mission_item][4]
+            param1,param2,param3,param4 = wp_list[mission_item][5],wp_list[mission_item][6],wp_list[mission_item][4],wp_list[mission_item][8]
+            x,y,z = wp_list[mission_item][9],wp_list[mission_item][10],wp_list[mission_item][11]
+            mission_type = wp_list[mission_item][12]
+
+            
+            p = mavutil.mavlink.MAVLink_mission_item_message(master.target_system, master.target_component,
+                                                            seq, frame, command,
+                                                            current, autocontinue,
+                                                            param1, param2, param3, param4,
+                                                            x, y, z,mission_type)
+            wp.add(p)
+
+        print('NEW WAYPOINT COUNT : ',wp.count())
+        a = clear_wp() 
+        if a:
+            pass
+        else:
+            continue
+        master.waypoint_count_send(wp.count())
+
+        for i in range(wp.count()):
+            msg = master.recv_match(type=['MISSION_REQUEST'],blocking=True)
+            # print(msg)
+            master.mav.send(wp.wp(msg.seq))
+            # print(f'Sending waypoint {msg.seq}')
+            done = True
 
 
 def loiter_point(lat,lon,frame=3,command=18,current=0,autocontinue=1,turns=1,param2=1,radius=50,param4=1.0,z=50.0,mission_type=0):
