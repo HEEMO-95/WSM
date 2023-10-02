@@ -6,13 +6,15 @@ import threading
 from TGTs import *
 
 
-HOST = '192.168.1.5'
-PORT = 2249  # state socket port
+HOST = 'localhost'
+PORT = 2250  # state socket port
 
 # ardu = serial.Serial('/dev/ttyUSB0', 115200)  # Arduino "/dev/ttyACM0"
 # time.sleep(3)
+update_mission(mision_list,new_point=None)
 
 Target = [-35.35643454149282,  149.16611533539404 ,  584]
+loiter_cmd = False
 
 Target_list = []
 target_num = 0
@@ -25,7 +27,6 @@ tilt, pan = 0 , 0
 cmd_enum, cmd_param1, cmd_param2, cmd_param3 = 2 , 0 , 0 , 0
 mode = 2
 lock_mode = 0
-
 connected = False
 
 
@@ -33,7 +34,7 @@ def server_handling():
     i = 0
     global lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1  # send
     global cmd_enum, cmd_param1, cmd_param2, cmd_param3 # receive
-    global connected
+    global connected, mode, loiter_cmd, loiter_lat , loiter_lon
     target_num, target_x, target_y, target_z = 0,0,0,0
     connected = False
     while True:
@@ -49,6 +50,7 @@ def server_handling():
 
 
         if connected:
+            # itrate through the targets in the target list, sending one target at time to the server 
             j = len(Target_list)
             if i < j:
                 target_num, target_x, target_y = Target_list[i][0], Target_list[i][1], Target_list[i][2]
@@ -76,6 +78,24 @@ def server_handling():
                     cmd = cmd.split(',')
                     cmd_enum, cmd_param1, cmd_param2, cmd_param3 = int(cmd[0]), float(cmd[1]), float(cmd[2]), float(cmd[3])
 
+            if cmd_enum == 10:
+                Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
+                if Target[2]==0:
+                    master.mav.send(mavutil.mavlink.MAVLink_terrain_check_message(int(lat*1e7), int(lon*1e7)))
+                    report = master.recv_match(type='TERRAIN_REPORT', blocking=True)
+                    if report.lat == int(lat*1e7):
+                        Target[2]= report.terrain_height
+                        mode = 2
+                        print('recived slave command, target elevation : ',elev)
+                        cmd_enum = 0
+                    else:
+                        continue
+
+            if cmd_enum==20:
+                print('revied loitering command, loiter point : ',cmd_param1,' ',cmd_param2)
+                loiter_cmd = True  # open the command in the progrogram loop
+                loiter_lat , loiter_lon = cmd_param1 , cmd_param2
+                cmd_enum = 0  # clear the 
 
 threading.Thread(target=server_handling,daemon=True).start()
 
@@ -106,25 +126,26 @@ while True:
         else :
             pass
         
-    if cmd_enum==20:
-        loiter(cmd_param1,cmd_param2)
-
-    if cmd_enum == 10:
-        Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
-        if Target[2]==0:
-            master.mav.send(mavutil.mavlink.MAVLink_terrain_check_message(int(lat*1e7), int(lon*1e7)))
-            report = master.recv_match(type='TERRAIN_REPORT', blocking=True)
-            if report.lat == int(lat*1e7):
-                Target[2]= report.terrain_height
-                mode = 2
-                print(elev,report.lat,int(lat*1e7))
-            else:
-                continue
+    # if cmd_enum==20:
+    #     loiter(cmd_param1,cmd_param2)
 
 
-    if cmd_enum > 10 :
-        print(f'command recived: {cmd_enum}')
-        time.sleep(1)
+    if loiter_cmd:
+        loiter(loiter_lat,loiter_lon)
+        loiter_cmd = False
+
+    # if cmd_enum == 10:
+    #     Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
+    #     if Target[2]==0:
+    #         master.mav.send(mavutil.mavlink.MAVLink_terrain_check_message(int(lat*1e7), int(lon*1e7)))
+    #         report = master.recv_match(type='TERRAIN_REPORT', blocking=True)
+    #         if report.lat == int(lat*1e7):
+    #             Target[2]= report.terrain_height
+    #             mode = 2
+    #             print(elev,report.lat,int(lat*1e7))
+    #         else:
+    #             continue
+
 
     if mode == 10:
         control_mode = 0
