@@ -22,12 +22,12 @@ PygameUI.lat,PygameUI.lon,PygameUI.elev,PygameUI.tilt,PygameUI.pan,PygameUI.dist
 lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1= 0,0,0,0,0,0,0,0,0,0,0
 cmd_enum, cmd_param1, cmd_param2, cmd_param3 = 0 , 0 , 0 , 0
 
-shown_markers = [0]
+shown_markers = [50]
 marker_list = []
 new_marker = True
 
 def client_handling():
-	global gameON , connected # Program
+	global gameON , connected ,new_marker# Program
 	global lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1  # receive
 	global cmd_enum, cmd_param1, cmd_param2, cmd_param3  # send
 	server.listen()
@@ -65,8 +65,9 @@ def client_handling():
 			for data in msg:
 				if data != '':
 					data = data.split(',')
-					lat, lon, elev, tilt, pan, distance, bearing, psi,lat1,lon1,elev1 = ((float(data[0])),(float(data[1])),(float(data[2])),
-									(float(data[3])),(float(data[4])),(float(data[5])),(float(data[6])),(float(data[7])),(float(data[8])),(float(data[9])),(float(data[10])))
+					lat, lon, elev, tilt, pan, distance, bearing, psi,lat1,lon1,elev1 ,target_num, target_x, target_y= ((float(data[0])),(float(data[1])),(float(data[2])),
+									(float(data[3])),(float(data[4])),(float(data[5])),(float(data[6])),(float(data[7])),(float(data[8])),(float(data[9])),(float(data[10])),
+									(int(data[11])),(float(data[12])),(float(data[13])))
 			if msg == '':
 				print('Disconnected')
 				connected = False
@@ -85,17 +86,21 @@ def client_handling():
 				app.map_widget.set_zoom(15)
 				app.map_widget.set_position(lat1, lon1)
 				setup = False
+				game_setup = True
 
 			# TGP control when gamepy is lunched.
 
-			if gameON == True:
-				if PygameUI.msg1 != None:
+			if gameON:
+				if game_setup:
+					time.sleep(0.2)
+					game_setup = False
+				if PygameUI.msg1 == None:
+					gameON = False
+					game_setup = False
+				else:
 					cmd_enum = PygameUI.msg1
 					cmd_param1 = PygameUI.msg2
 					cmd_param2 = PygameUI.msg3
-					# print(cmd_enum, cmd_param1, cmd_param2)
-				else:
-					gameON = False # when pygame shuts down, its sends none as the last message
 
 
 			# loop (looping when connected)
@@ -105,13 +110,17 @@ def client_handling():
 			aircraft_marker.set_position(lat1,lon1)
 			sight_marker.set_position(lat,lon)
 
+			if target_num != 0 and target_num not in shown_markers:
+				marker_list.append([target_num,target_x,target_y])
+				new_marker = True
+
 
 def mark_point():
 	print("marking")
 	global marker_list,shown_markers,new_marker
 	entered_text = app.menu.entry_var.get()
 	a = entered_text.split(" ")
-	marker_list.append((shown_markers[-1] + 1, float(a[0]), float(a[1])))
+	marker_list.append([shown_markers[-1] + 1, float(a[0]), float(a[1])])
 	app.menu.entry_var.set('')
 	new_marker = True
 
@@ -119,6 +128,7 @@ def VideoFeed():
 	global gameON
 	pygameGUI = threading.Thread(target=PygameUI.game, daemon=True)
 	gameON = True
+	print('Game command on')
 	pygameGUI.start()
 
 def slave_cmd():
@@ -145,7 +155,7 @@ def marker_gen():
 			app.menu.refresh_marker_select(marker_list)
 			for i in range(len(marker_list)):
 				if marker_list[i][0] not in shown_markers:
-					app.map_widget.set_marker(marker_list[i][1],marker_list[i][2],f'{i+1}')
+					app.map_widget.set_marker(marker_list[i][1],marker_list[i][2],f'{marker_list[i][0]}')
 					shown_markers.append(marker_list[i][0])
 
 
