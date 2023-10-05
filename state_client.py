@@ -27,6 +27,7 @@ tilt, pan = 0 , 0
 cmd_enum, cmd_param1, cmd_param2, cmd_param3 = 2 , 0 , 0 , 0
 mode = 2
 lock_mode = 0
+
 connected = False
 
 
@@ -51,10 +52,10 @@ def server_handling():
 
         if connected:
             # itrate through the targets in the target list, sending one target at time to the server 
-            j = len(Target_list)
-            if i < j:
+            if i < len(Target_list):
                 target_num, target_x, target_y = Target_list[i][0], Target_list[i][1], Target_list[i][2]
                 i+=1
+                # print(target_num)
             else:
                 i = 0
             
@@ -126,9 +127,6 @@ while True:
         else :
             pass
         
-    # if cmd_enum==20:
-    #     loiter(cmd_param1,cmd_param2)
-
 
     if loiter_cmd:
         loiter(loiter_lat,loiter_lon)
@@ -160,9 +158,9 @@ while True:
 
     if mode == 2:  #slave
         control_mode = 0
+        lock_mode = 0
         lat, lon, elev = Target[0], Target[1], Target[2] 
         tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat, lon, elev)
-
 
     if mode == 3:  #Desingate
         control_mode = 1  # drive the motors based on given speed
@@ -171,9 +169,11 @@ while True:
 
 
     if mode == 4:  #locke
+
         if lock_mode == 0:
             lat, lon, elev, distance, bearing, psi,lat1,lon1,elev1 = ranging(tilt, pan)
-            Target_list.append([len(Target_list),lat,lon])
+            Target_list.append([len(Target_list)+1,lat,lon])
+            print('Target added !', Target_list)
             lock_mode = 1  # target aqquired
 
         if lock_mode == 1:
