@@ -7,7 +7,7 @@ from TGTs import *
 
 
 HOST = 'localhost'
-PORT = 2250  # state socket port
+PORT = 12125  # state socket port
 
 # ardu = serial.Serial('/dev/ttyUSB0', 115200)  # Arduino "/dev/ttyACM0"
 # time.sleep(3)
@@ -15,7 +15,7 @@ update_mission(mision_list,new_point=None)
 
 Target = [-35.35643454149282,  149.16611533539404 ,  584]
 loiter_cmd = False
-
+cont_cmd = False
 Target_list = []
 target_num = 0
 target_x = 0
@@ -35,7 +35,7 @@ def server_handling():
     i = 0
     global lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1  # send
     global cmd_enum, cmd_param1, cmd_param2, cmd_param3 # receive
-    global connected, mode, loiter_cmd, loiter_lat , loiter_lon
+    global connected, mode, loiter_cmd, loiter_lat, loiter_lon, cont_cmd
     target_num, target_x, target_y, target_z = 0,0,0,0
     connected = False
     while True:
@@ -98,6 +98,12 @@ def server_handling():
                 loiter_lat , loiter_lon = cmd_param1 , cmd_param2
                 cmd_enum = 0  # clear the 
 
+            if cmd_enum==30:
+                print('revied carry on command')
+                cont_cmd = True  # open the command in the progrogram loop
+                cmd_enum = 0  # clear the 
+
+            
 threading.Thread(target=server_handling,daemon=True).start()
 
 while True:
@@ -131,6 +137,10 @@ while True:
     if loiter_cmd:
         loiter(loiter_lat,loiter_lon)
         loiter_cmd = False
+
+    if cont_cmd:
+        carry_on()
+        cont_cmd = False
 
     # if cmd_enum == 10:
     #     Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
