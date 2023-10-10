@@ -11,7 +11,7 @@ import numpy as np
 import time
 
 HOST = 'localhost'
-PORT = 2250  # state socket port
+PORT = 12125  # state socket port
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
@@ -145,6 +145,10 @@ def loiter_cmd():
 	print(cmd)
 	cmd_enum,cmd_param1,cmd_param2 = 20,cmd[1],cmd[2]
 
+def cont_cmd():
+	global cmd_enum
+	cmd_enum = 30
+
 
 def marker_gen():
 	global marker_list,shown_markers,new_marker
@@ -205,7 +209,8 @@ class Menu(ttk.Frame):
 		self.columnconfigure((0,1,2),weight= 1 , uniform= 'a')
 		self.rowconfigure((0,1,2,3,4,5,6,7,8,9),weight= 1 , uniform= 'a')
 		
-		self.p1 = PhotoImage(file="/home/heemo/WSM/WSMICON.png")
+		current_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+		self.p1 = PhotoImage(file=(os.path.join(current_path, "WSMICON.png")))
 		self.pic = ttk.Label(parent, image=self.p1)
 		self.pic.grid(row=0, column=0,sticky="nsew",columnspan=3,rowspan=3)
 		
@@ -227,8 +232,13 @@ class Menu(ttk.Frame):
 		self.string_value = tk.StringVar( value= 'Connect')
 		self.button = ttk.Button(self, textvariable= self.string_value, command = connect)
 		self.button.grid(row=3, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
+
 		self.button = ttk.Button(self, text = 'Loiter', command = loiter_cmd)
-		self.button.grid(row=4, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
+		self.button.grid(row=4, column=0,sticky="nsew", columnspan=2,pady=10, padx=10)
+		self.button = ttk.Button(self, text = 'carry-on', command = cont_cmd)
+		self.button.grid(row=4, column=3,sticky="nsew", pady=10, padx=10)
+
+
 		self.button = ttk.Button(self, text = 'Engage (CCRP)', command = button_func)
 		self.button.grid(row=5, column=0,sticky="nsew", columnspan=4,pady=10, padx=10)
 		self.button = ttk.Button(self, text = 'Slave TGP', command = slave_cmd)
@@ -249,6 +259,6 @@ class Menu(ttk.Frame):
 
 
 if __name__ == "__main__":
-	app = App(size=(1500,700),title="heemo")
+	app = App(size=(1500,700),title="WSM Big Picture")
 	threading.Thread(target=marker_gen,daemon=True).start()
 	app.start()
