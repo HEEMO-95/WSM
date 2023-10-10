@@ -133,10 +133,10 @@ def update_mission(wp_list,new_point):
             done = True
 
 
-def loiter_point(lat,lon,frame=3,command=18,current=0,autocontinue=1,turns=1,param2=1,radius=50,param4=1.0,z=50.0,mission_type=0):
+def loiter_point(lat,lon,frame=3,command=17,current=0,autocontinue=1,param1=0,param2=0,radius=50,param4=1.0,z=50.0,mission_type=0):
     msg = master.recv_match(type=['MISSION_ITEM_REACHED'],blocking=True)
     seq = 1 + msg.seq
-    param1 = turns
+    # param1 = turns
     param3 = radius
     x = lat
     y = lon
@@ -171,10 +171,17 @@ def loiter(lat,lon):
     ntime = time.time()
     print(ntime-otime)
 
+def carry_on():
+    msg = master.recv_match(type=['MISSION_ITEM_REACHED'],blocking=True)
+    seq = 2 + msg.seq
+    flight_mode('AUTO')
+    MAV_CMD_NAV_WAYPOINT(seq)
+
+
 mision_list = [[0, 0, 16, 0, 1, 0.0, 0.0, 0.0, 0.0, -35.36323928833008, 149.16522216796875, 584.0, 0]
                , [1, 3, 22, 0, 1, 15.0, 0.0, 0.0, 0.0, -35.36326217651367, 149.1652374267578, 50.0, 0]
                , [2, 3, 16, 0, 1, 0.0, 0.0, 0.0, 0.0, -35.358699798583984, 149.16436767578125, 50.0, 0]
-               , [3, 3, 18, 0, 1, 4.0, 0.0, 30.0, 0.0, -35.35601043701172, 149.159423828125, 50.0, 0]
+               , [3, 3, 18, 0, 1, 200.0, 0.0, 30.0, 0.0, -35.35601043701172, 149.159423828125, 50.0, 0]
                , [4, 3, 16, 0, 1, 0.0, 0.0, 0.0, 0.0, -35.359615325927734, 149.15618896484375, 50.0, 0]
                , [5, 3, 16, 0, 1, 0.0, 0.0, 0.0, 0.0, -35.367088317871094, 149.1580810546875, 50.0, 0]
                , [6, 3, 16, 0, 1, 0.0, 0.0, 0.0, 0.0, -35.36829376220703, 149.16258239746094, 50.0, 0]
@@ -249,7 +256,8 @@ def designate(azimuth,elevation, perc: bool = False):
     elevation = np.deg2rad(elevation)
 
     # Convert input values from degrees to radians
-    lat1,lon1,elev1 = altitude, azimuth, elevation
+    lat1,lon1,elev1 = altitude, azimuth, altitude
+
     elevation = np.deg2rad(elevation)
     lat1_rad = np.deg2rad(lat1)
     lon1_rad = np.deg2rad(lon1)
@@ -340,13 +348,15 @@ def ranging(azimuth,elevation, plot=False):
     phi = mav.roll
     theta = mav.pitch
     psi = mav.yaw
-    lat1 = mav.lat * 1e-7
-    lon1 = mav.lng * 1e-7
+    latitude = mav.lat * 1e-7
+    longtiude = mav.lng * 1e-7
     altitude = mav.altitude
     azimuth = np.deg2rad(azimuth)
     elevation = np.deg2rad(elevation)
 
     # Convert input values from degrees to radians
+    lat1, lon1, elev1 = latitude, longtiude, altitude  # (dynamic)
+
     lat1_rad = np.deg2rad(lat1)
     lon1_rad = np.deg2rad(lon1)
 
@@ -544,4 +554,4 @@ def ranging(azimuth,elevation, plot=False):
     # plt.draw()
     # plt.pause(1)
 
-    return lat, lon, elev, distance, np.rad2deg(bearing), psi
+    return lat, lon, elev, distance, np.rad2deg(bearing), psi, lat1,lon1,elev1
