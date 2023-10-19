@@ -30,8 +30,8 @@ lock_mode = 0
 
 connected = False
 
-
 def server_handling():
+    print('Server Handling Started')
     i = 0
     global lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1  # send
     global cmd_enum, cmd_param1, cmd_param2, cmd_param3 # receive
@@ -106,92 +106,96 @@ def server_handling():
             
 threading.Thread(target=server_handling,daemon=True).start()
 
-while True:
-    
-    # # arduino handling
-    # ardu_data = ardu.readline()
-    # ardu.flushInput()
-    # ardu_data = ardu.readline()
-    # ardu_data = (str(ardu_data, 'utf-8')).strip('\r\n')
-    # try :
-    #     if ardu_data[0] != "!":
-    #         continue
-    # except : 
-    #     continue
+def program():
+    print('Main Program Started!')
+    global lat,lon,elev,tilt,pan,distance,bearing,psi,lat1,lon1,elev1  # send
+    global cmd_enum, cmd_param1, cmd_param2, cmd_param3 # receive
+    global connected, mode, loiter_cmd, loiter_lat, loiter_lon, cont_cmd
+    while True:
+        # # arduino handling
+        # ardu_data = ardu.readline()
+        # ardu.flushInput()
+        # ardu_data = ardu.readline()
+        # ardu_data = (str(ardu_data, 'utf-8')).strip('\r\n')
+        # try :
+        #     if ardu_data[0] != "!":
+        #         continue
+        # except : 
+        #     continue
 
-    # ardu_data = ardu_data[1:]
-    # gimbal = ardu_data.split(',')
-    # pan, tilt = float(gimbal[0]) , float(gimbal[1])  
+        # ardu_data = ardu_data[1:]
+        # gimbal = ardu_data.split(',')
+        # pan, tilt = float(gimbal[0]) , float(gimbal[1])  
 
-    
-
-    if connected:         # CMD Loop connected
-        if 1 <= cmd_enum <= 10:
-            # print('CMD_Loop connected')
-            mode , tilt_cmd, pan_cmd = cmd_enum, cmd_param1, cmd_param2
-
-        else :
-            pass
         
 
-    if loiter_cmd:
-        loiter(loiter_lat,loiter_lon)
-        loiter_cmd = False
+        if connected:         # CMD Loop connected
+            if 1 <= cmd_enum <= 10:
+                # print('CMD_Loop connected')
+                mode , tilt_cmd, pan_cmd = cmd_enum, cmd_param1, cmd_param2
 
-    if cont_cmd:
-        carry_on()
-        cont_cmd = False
+            else :
+                pass
+            
 
-    # if cmd_enum == 10:
-    #     Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
-    #     if Target[2]==0:
-    #         master.mav.send(mavutil.mavlink.MAVLink_terrain_check_message(int(lat*1e7), int(lon*1e7)))
-    #         report = master.recv_match(type='TERRAIN_REPORT', blocking=True)
-    #         if report.lat == int(lat*1e7):
-    #             Target[2]= report.terrain_height
-    #             mode = 2
-    #             print(elev,report.lat,int(lat*1e7))
-    #         else:
-    #             continue
+        if loiter_cmd:
+            loiter(loiter_lat,loiter_lon)
+            loiter_cmd = False
 
+        if cont_cmd:
+            carry_on()
+            cont_cmd = False
 
-    if mode == 10:
-        control_mode = 0
-        tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat,lon,elev)
-        
-    if mode == 1:  #center
-        control_mode = 0
-        tilt, pan, tilt_cmd, pan_cmd  = 0, 0, 0, 0
-        lat, lon, elev, distance, bearing, psi = 0, 0, 0, 0, 0, 0
-        lat1,lon1,elev1=0,0,0
+        # if cmd_enum == 10:
+        #     Target[0], Target[1], Target[2] = cmd_param1, cmd_param2, cmd_param3
+        #     if Target[2]==0:
+        #         master.mav.send(mavutil.mavlink.MAVLink_terrain_check_message(int(lat*1e7), int(lon*1e7)))
+        #         report = master.recv_match(type='TERRAIN_REPORT', blocking=True)
+        #         if report.lat == int(lat*1e7):
+        #             Target[2]= report.terrain_height
+        #             mode = 2
+        #             print(elev,report.lat,int(lat*1e7))
+        #         else:
+        #             continue
 
 
-    if mode == 2:  #slave
-        control_mode = 0
-        lock_mode = 0
-        lat, lon, elev = Target[0], Target[1], Target[2] 
-        tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat, lon, elev)
+        if mode == 10:
+            control_mode = 0
+            tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat,lon,elev)
+            
+        if mode == 1:  #center
+            control_mode = 0
+            tilt, pan, tilt_cmd, pan_cmd  = 0, 0, 0, 0
+            lat, lon, elev, distance, bearing, psi = 0, 0, 0, 0, 0, 0
+            lat1,lon1,elev1=0,0,0
 
-    if mode == 3:  #Desingate
-        control_mode = 1  # drive the motors based on given speed
-        lat, lon, elev, distance, bearing, psi,lat1,lon1,elev1 = designate(tilt,pan)
-        lock_mode = 0
 
-
-    if mode == 4:  #locke
-
-        if lock_mode == 0:
-            lat, lon, elev, distance, bearing, psi,lat1,lon1,elev1 = ranging(tilt, pan)
-            Target_list.append([len(Target_list)+1,lat,lon])
-            print('Target added !', Target_list)
-            lock_mode = 1  # target aqquired
-
-        if lock_mode == 1:
-            control_mode = 0  # drive the motors based on given angles
+        if mode == 2:  #slave
+            control_mode = 0
+            lock_mode = 0
+            lat, lon, elev = Target[0], Target[1], Target[2] 
             tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat, lon, elev)
 
+        if mode == 3:  #Desingate
+            control_mode = 1  # drive the motors based on given speed
+            lat, lon, elev, distance, bearing, psi,lat1,lon1,elev1 = designate(tilt,pan)
+            lock_mode = 0
 
-    # # send commands to arduio controller
-    # cmd = (f'{control_mode} ,{tilt_cmd} ,{pan_cmd}')
-    # cmd = (cmd+'\r')
-    # ardu.write(cmd.encode())
+
+        if mode == 4:  #locke
+
+            if lock_mode == 0:
+                lat, lon, elev, distance, bearing, psi,lat1,lon1,elev1 = ranging(tilt, pan)
+                Target_list.append([len(Target_list)+1,lat,lon])
+                print('Target added !', Target_list)
+                lock_mode = 1  # target aqquired
+
+            if lock_mode == 1:
+                control_mode = 0  # drive the motors based on given angles
+                tilt_cmd, pan_cmd , distance, bearing, psi,lat1,lon1,elev1 = lock(lat, lon, elev)
+
+
+        # # send commands to arduio controller
+        # cmd = (f'{control_mode} ,{tilt_cmd} ,{pan_cmd}')
+        # cmd = (cmd+'\r')
+        # ardu.write(cmd.encode())
